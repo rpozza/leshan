@@ -16,10 +16,16 @@
 package org.eclipse.leshan.server.demo.servlet;
 
 import java.io.IOException;
+<<<<<<< f38518d390dd58e6b8cbf1774d57b98006d06fa5
 import java.util.Collection;
+=======
+import java.time.ZonedDateTime; // Added
+import java.time.format.DateTimeFormatter; // Added
+>>>>>>> Added RabbitMQ Support, JSON IPSO Smart Objects and AutoStart Observations
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeoutException; // Added
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -28,6 +34,12 @@ import org.eclipse.leshan.core.node.LwM2mNode;
 import org.eclipse.leshan.core.observation.Observation;
 import org.eclipse.leshan.core.response.ObserveResponse;
 import org.eclipse.leshan.server.californium.impl.LeshanServer;
+<<<<<<< f38518d390dd58e6b8cbf1774d57b98006d06fa5
+=======
+import org.eclipse.leshan.server.client.Registration;
+import org.eclipse.leshan.server.client.RegistrationListener;
+import org.eclipse.leshan.server.client.RegistrationUpdate;
+>>>>>>> Added RabbitMQ Support, JSON IPSO Smart Objects and AutoStart Observations
 import org.eclipse.leshan.server.demo.servlet.json.LwM2mNodeSerializer;
 import org.eclipse.leshan.server.demo.servlet.json.RegistrationSerializer;
 import org.eclipse.leshan.server.demo.servlet.log.CoapMessage;
@@ -44,8 +56,16 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.rabbitmq.client.Channel; // Added 
+import com.rabbitmq.client.Connection; // Added
+import com.rabbitmq.client.ConnectionFactory; // Added
 
 public class EventServlet extends EventSourceServlet {
+    /* ---------------------------------------------------------- */
+    private static Channel rabbitchannel;
+
+    private static final String EXCHANGE_NAME = "json_log";
+    /* ---------------------------------------------------------- */
 
     private static final String EVENT_DEREGISTRATION = "DEREGISTRATION";
 
@@ -106,6 +126,18 @@ public class EventServlet extends EventSourceServlet {
             }
 
             if (registration != null) {
+               /* ------------------------------------------------------------------------------------------------ */
+                String rabbmqdata = new StringBuilder("{\"ep\":\"").append(registration.getEndpoint()).append("\",\"ts\":\"")
+                        .append(ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT))
+                        .append("\",\"pth\":\"").append(observation.getPath().toString())
+                        .append("\",\"val\":").append(gson.toJson(response.getContent()))
+                        .append("}").toString();
+                try{
+                   rabbitchannel.basicPublish(EXCHANGE_NAME,"", null, rabbmqdata.getBytes());
+                }catch (IOException e){
+                   e.printStackTrace();
+                }
+                /* ------------------------------------------------------------------------------------------------ */                
                 String data = new StringBuilder("{\"ep\":\"").append(registration.getEndpoint()).append("\",\"res\":\"")
                         .append(observation.getPath().toString()).append("\",\"val\":")
                         .append(gson.toJson(response.getContent())).append("}").toString();
@@ -142,8 +174,25 @@ public class EventServlet extends EventSourceServlet {
         gsonBuilder.registerTypeHierarchyAdapter(LwM2mNode.class, new LwM2mNodeSerializer());
         gsonBuilder.setDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
         this.gson = gsonBuilder.create();
+        /* ------------------------------------------------------------------------------------------------ */
+        ConnectionFactory factory = new ConnectionFactory();
+        factory.setUsername("lwm2m");
+        factory.setPassword("1cs-cl0ud.rabbit");
+        factory.setVirtualHost("/");
+        factory.setHost("131.227.92.234");
+        factory.setPort(5672);
+        try {
+            Connection connection = factory.newConnection();
+            rabbitchannel = connection.createChannel();
+            rabbitchannel.exchangeDeclare(EXCHANGE_NAME, "fanout");
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (TimeoutException e) {
+            e.printStackTrace();
+        }
+        /* ------------------------------------------------------------------------------------------------ */
     }
-
+    
     private synchronized void sendEvent(String event, String data, String endpoint) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Dispatching {} event from endpoint {}", event, endpoint);
@@ -167,6 +216,10 @@ public class EventServlet extends EventSourceServlet {
         @Override
         public void trace(CoapMessage message) {
             String coapLog = EventServlet.this.gson.toJson(message);
+            /* ------------------------------------------------------------------------------------------------ */
+            // System.out.printf("Endpoint: " + endpoint + ", Message Type: " + message.type + ", Timestamp: %d,
+            // Payload: " + message.payload + "\r\n", message.timestamp);
+            /* ------------------------------------------------------------------------------------------------ */
             sendEvent(EVENT_COAP_LOG, coapLog, endpoint);
         }
 

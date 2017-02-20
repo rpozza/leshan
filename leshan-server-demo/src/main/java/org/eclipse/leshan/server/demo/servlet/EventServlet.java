@@ -15,6 +15,7 @@
  *******************************************************************************/
 package org.eclipse.leshan.server.demo.servlet;
 
+import java.io.FileReader; //Added
 import java.io.IOException;
 <<<<<<< f38518d390dd58e6b8cbf1774d57b98006d06fa5
 import java.util.Collection;
@@ -56,6 +57,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject; //Added
+import com.google.gson.stream.JsonReader; // Added
 import com.rabbitmq.client.Channel; // Added 
 import com.rabbitmq.client.Connection; // Added
 import com.rabbitmq.client.ConnectionFactory; // Added
@@ -63,6 +66,8 @@ import com.rabbitmq.client.ConnectionFactory; // Added
 public class EventServlet extends EventSourceServlet {
     /* ---------------------------------------------------------- */
     private static Channel rabbitchannel;
+
+    private static final String MYCONFIG_FILE = "data/myconfig.json";
 
     private static final String EXCHANGE_NAME = "json_log";
     /* ---------------------------------------------------------- */
@@ -176,11 +181,22 @@ public class EventServlet extends EventSourceServlet {
         this.gson = gsonBuilder.create();
         /* ------------------------------------------------------------------------------------------------ */
         ConnectionFactory factory = new ConnectionFactory();
-        factory.setUsername("lwm2m");
-        factory.setPassword("1cs-cl0ud.rabbit");
-        factory.setVirtualHost("/");
-        factory.setHost("131.227.92.234");
-        factory.setPort(5672);
+
+        try {
+            JsonReader reader = new JsonReader(new FileReader(MYCONFIG_FILE));
+            JsonObject jobj = gson.fromJson(reader, JsonObject.class);
+            String RabbitHost = jobj.get("RabbitHost").getAsString();
+            Integer RabbitPort = jobj.get("RabbitPort").getAsInt();
+            String RabbitUsername = jobj.get("RabbitUsername").getAsString();
+            String RabbitPassword = jobj.get("RabbitPassword").getAsString();
+            factory.setUsername(RabbitUsername);
+            factory.setPassword(RabbitPassword);
+            factory.setVirtualHost("/");
+            factory.setHost(RabbitHost);
+            factory.setPort(RabbitPort);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         try {
             Connection connection = factory.newConnection();
             rabbitchannel = connection.createChannel();

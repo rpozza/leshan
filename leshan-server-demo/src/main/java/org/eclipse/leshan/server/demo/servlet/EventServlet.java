@@ -67,7 +67,7 @@ public class EventServlet extends EventSourceServlet {
     /* ---------------------------------------------------------- */
     private static Channel rabbitchannel;
 
-    private static final String MYCONFIG_FILE = "data/myconfig.json";
+    private static final String MYCONFIG_FILE = "/home/ubuntu/leshan/data/myconfig.json";
 
     private static final String EXCHANGE_NAME = "json_log";
     /* ---------------------------------------------------------- */

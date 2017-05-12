@@ -18,12 +18,12 @@ package org.eclipse.leshan.server.californium.impl;
 import static org.eclipse.leshan.core.californium.ExchangeUtil.extractIdentity;
 import static org.eclipse.leshan.core.californium.ResponseCodeUtil.fromLwM2mCode;
 
-import java.io.IOException; // Added
-import java.io.InputStream; // Added
-import java.net.HttpURLConnection; // Added
+//import java.io.IOException; // Added
+//import java.io.InputStream; // Added
+//import java.net.HttpURLConnection; // Added
 import java.net.InetSocketAddress;
-import java.net.MalformedURLException; // Added
-import java.net.URL; // Added
+//import java.net.MalformedURLException; // Added
+//import java.net.URL; // Added
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -200,35 +200,35 @@ public class RegisterResource extends CoapResource {
             exchange.setLocationPath(RESOURCE_NAME + "/" + response.getRegistrationID());
             exchange.respond(ResponseCode.CREATED);
 
-            /*------------------------------------------------------------------------------------------------------------------*/
-            // on registration, sends an observation notification
-            String[] sensors = { "/3301/0", "/3303/0", "/3304/0", "/3324/0", "/3325/0", "/3330/0", "/3348/0" };
-            String baseURL = "http://127.0.0.1:8080/api/clients/" + endpoint;
-            for (int i = 0; i < sensors.length; i++) {
-                String finalURL = baseURL + sensors[i] + "/observe";
-                int tries = 0;
-                int max_attempts = 10;
-                while (tries <= max_attempts) {
-                    try {
-                        // maximum 3 attempts
-                        URL servletURL = new URL(finalURL);
-                        HttpURLConnection servletHTTPConn = (HttpURLConnection) servletURL.openConnection();
-                        servletHTTPConn.setRequestMethod("POST");
-                        servletHTTPConn.setDoOutput(true);
-                        InputStream httpResponse = servletHTTPConn.getInputStream();
-                        System.out.printf("%d - HTTP POST Request @ " + finalURL + " ..OK!\r\n", (tries + 1));
-                        break;
-                    } catch (MalformedURLException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        System.out.printf("%d - HTTP POST Request @ " + finalURL + " .. NOT OK!\r\n", (tries + 1));
-                        if (++tries >= max_attempts) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            }
-        /*------------------------------------------------------------------------------------------------------------------*/
+            // /*------------------------------------------------------------------------------------------------------------------*/
+//            // on registration, sends an observation notification
+//            String[] sensors = { "/3301/0", "/3303/0", "/3304/0", "/3324/0", "/3325/0", "/3330/0", "/3348/0" };
+//            String baseURL = "http://127.0.0.1:8080/api/clients/" + endpoint;
+//            for (int i = 0; i < sensors.length; i++) {
+//                String finalURL = baseURL + sensors[i] + "/observe";
+//                int tries = 0;
+//                int max_attempts = 10;
+//                while (tries <= max_attempts) {
+//                    try {
+//                        // maximum 3 attempts
+//                        URL servletURL = new URL(finalURL);
+//                        HttpURLConnection servletHTTPConn = (HttpURLConnection) servletURL.openConnection();
+//                        servletHTTPConn.setRequestMethod("POST");
+//                        servletHTTPConn.setDoOutput(true);
+//                        InputStream httpResponse = servletHTTPConn.getInputStream();
+//                        System.out.printf("%d - HTTP POST Request @ " + finalURL + " ..OK!\r\n", (tries + 1));
+//                        break;
+//                    } catch (MalformedURLException e) {
+//                        e.printStackTrace();
+//                    } catch (IOException e) {
+//                        System.out.printf("%d - HTTP POST Request @ " + finalURL + " .. NOT OK!\r\n", (tries + 1));
+//                        if (++tries >= max_attempts) {
+//                            e.printStackTrace();
+//                        }
+//                    }
+//                }
+//            }
+            // /*------------------------------------------------------------------------------------------------------------------*/
         } else {
             exchange.respond(fromLwM2mCode(response.getCode()), response.getErrorMessage());
         }

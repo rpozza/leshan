@@ -17,12 +17,9 @@ package org.eclipse.leshan.server.demo.servlet;
 
 import java.io.FileReader; //Added
 import java.io.IOException;
-<<<<<<< f38518d390dd58e6b8cbf1774d57b98006d06fa5
-import java.util.Collection;
-=======
 import java.time.ZonedDateTime; // Added
 import java.time.format.DateTimeFormatter; // Added
->>>>>>> Added RabbitMQ Support, JSON IPSO Smart Objects and AutoStart Observations
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,12 +32,6 @@ import org.eclipse.leshan.core.node.LwM2mNode;
 import org.eclipse.leshan.core.observation.Observation;
 import org.eclipse.leshan.core.response.ObserveResponse;
 import org.eclipse.leshan.server.californium.impl.LeshanServer;
-<<<<<<< f38518d390dd58e6b8cbf1774d57b98006d06fa5
-=======
-import org.eclipse.leshan.server.client.Registration;
-import org.eclipse.leshan.server.client.RegistrationListener;
-import org.eclipse.leshan.server.client.RegistrationUpdate;
->>>>>>> Added RabbitMQ Support, JSON IPSO Smart Objects and AutoStart Observations
 import org.eclipse.leshan.server.demo.servlet.json.LwM2mNodeSerializer;
 import org.eclipse.leshan.server.demo.servlet.json.RegistrationSerializer;
 import org.eclipse.leshan.server.demo.servlet.log.CoapMessage;

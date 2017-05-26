@@ -27,7 +27,6 @@ import java.util.concurrent.TimeoutException; // Added
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.leshan.core.node.LwM2mNode;
 import org.eclipse.leshan.core.observation.Observation;
 import org.eclipse.leshan.core.response.ObserveResponse;
@@ -45,7 +44,7 @@ import org.eclipse.leshan.server.registration.RegistrationListener;
 import org.eclipse.leshan.server.registration.RegistrationUpdate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.eclipse.californium.core.network.Endpoint;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject; //Added
@@ -60,7 +59,9 @@ public class EventServlet extends EventSourceServlet {
 
     private static final String MYCONFIG_FILE = "/home/ubuntu/leshan/data/myconfig.json";
 
-    private static final String EXCHANGE_NAME = "json_log";
+    private static final String LOG_EXCHANGE = "json_log";
+    
+    private static final String REG_EXCHANGE = "json_reg";    
     /* ---------------------------------------------------------- */
 
     private static final String EVENT_DEREGISTRATION = "DEREGISTRATION";
@@ -91,6 +92,11 @@ public class EventServlet extends EventSourceServlet {
         @Override
         public void registered(Registration registration) {
             String jReg = EventServlet.this.gson.toJson(registration);
+            try {
+                rabbitchannel.basicPublish(REG_EXCHANGE, "", null, jReg.getBytes());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             sendEvent(EVENT_REGISTRATION, jReg, registration.getEndpoint());
         }
 
@@ -122,18 +128,17 @@ public class EventServlet extends EventSourceServlet {
             }
 
             if (registration != null) {
-               /* ------------------------------------------------------------------------------------------------ */
-                String rabbmqdata = new StringBuilder("{\"ep\":\"").append(registration.getEndpoint()).append("\",\"ts\":\"")
-                        .append(ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT))
-                        .append("\",\"pth\":\"").append(observation.getPath().toString())
-                        .append("\",\"val\":").append(gson.toJson(response.getContent()))
-                        .append("}").toString();
-                try{
-                   rabbitchannel.basicPublish(EXCHANGE_NAME,"", null, rabbmqdata.getBytes());
-                }catch (IOException e){
-                   e.printStackTrace();
+                /* ------------------------------------------------------------------------------------------------ */
+                String rabbmqdata = new StringBuilder("{\"ep\":\"").append(registration.getEndpoint())
+                        .append("\",\"ts\":\"").append(ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT))
+                        .append("\",\"pth\":\"").append(observation.getPath().toString()).append("\",\"val\":")
+                        .append(gson.toJson(response.getContent())).append("}").toString();
+                try {
+                    rabbitchannel.basicPublish(LOG_EXCHANGE, "", null, rabbmqdata.getBytes());
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-                /* ------------------------------------------------------------------------------------------------ */                
+                /* ------------------------------------------------------------------------------------------------ */
                 String data = new StringBuilder("{\"ep\":\"").append(registration.getEndpoint()).append("\",\"res\":\"")
                         .append(observation.getPath().toString()).append("\",\"val\":")
                         .append(gson.toJson(response.getContent())).append("}").toString();
@@ -191,7 +196,8 @@ public class EventServlet extends EventSourceServlet {
         try {
             Connection connection = factory.newConnection();
             rabbitchannel = connection.createChannel();
-            rabbitchannel.exchangeDeclare(EXCHANGE_NAME, "fanout");
+            rabbitchannel.exchangeDeclare(LOG_EXCHANGE, "fanout");
+            rabbitchannel.exchangeDeclare(REG_EXCHANGE, "fanout");
         } catch (IOException e) {
             e.printStackTrace();
         } catch (TimeoutException e) {
@@ -199,7 +205,7 @@ public class EventServlet extends EventSourceServlet {
         }
         /* ------------------------------------------------------------------------------------------------ */
     }
-    
+
     private synchronized void sendEvent(String event, String data, String endpoint) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Dispatching {} event from endpoint {}", event, endpoint);

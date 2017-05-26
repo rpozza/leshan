@@ -50,8 +50,14 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.eclipse.californium.core.network.config.NetworkConfig;
+import org.eclipse.jetty.server.HttpConfiguration; //Added
+import org.eclipse.jetty.server.HttpConnectionFactory; //Added
+import org.eclipse.jetty.server.LowResourceMonitor;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector; //Added
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.thread.QueuedThreadPool; // Added
+import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler; //Added
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.eclipse.leshan.LwM2m;
 import org.eclipse.leshan.core.model.ObjectLoader;
@@ -96,8 +102,8 @@ public class LeshanServerDemo {
                             "3336.xml", "3337.xml", "3338.xml", "3339.xml", "3340.xml", "3341.xml", "3342.xml",
                             "3343.xml", "3344.xml", "3345.xml", "3346.xml", "3347.xml", "3348.xml", "singlePhasePM.xml",
                             "VehicleControlUnit.xml", "Application-Data-Container.xml", "LWM2M_DevCapMgmt-v1_0.xml",
-                            "LWM2M_Software_Component-v1_0.xml", "LWM2M_Software_Management-v1_0.xml",
-                            "3-PhasePM.xml", "ActiveCmdhPolicy.xml", "CmdhBackOffParametersSet.xml", "CmdhBuffer.xml",
+                            "LWM2M_Software_Component-v1_0.xml", "LWM2M_Software_Management-v1_0.xml", "3-PhasePM.xml",
+                            "ActiveCmdhPolicy.xml", "CmdhBackOffParametersSet.xml", "CmdhBuffer.xml",
                             "CmdhDefaults.xml", "CmdhDefEcValues.xml", "CmdhEcDefParamValues.xml", "CmdhLimits.xml",
                             "CmdhNetworkAccessRules.xml", "CmdhNwAccessRule.xml", "CmdhPolicy.xml" };
 
@@ -174,7 +180,7 @@ public class LeshanServerDemo {
 
         // get http port
         String webPortOption = cl.getOptionValue("wp");
-        int webPort = 8080;
+        int webPort = 8081;
         if (webPortOption != null) {
             webPort = Integer.parseInt(webPortOption);
         }
@@ -207,8 +213,7 @@ public class LeshanServerDemo {
 
     public static void createAndStartServer(int webPort, String localAddress, int localPort, String secureLocalAddress,
             int secureLocalPort, String modelsFolderPath, String redisUrl, String keyStorePath, String keyStoreType,
-            String keyStorePass, String keyStoreAlias, String keyStoreAliasPass)
-            throws Exception {
+            String keyStorePass, String keyStoreAlias, String keyStoreAliasPass) throws Exception {
         // Prepare LWM2M server
         LeshanServerBuilder builder = new LeshanServerBuilder();
         builder.setLocalAddress(localAddress, localPort);
@@ -330,9 +335,40 @@ public class LeshanServerDemo {
 
         // Create and start LWM2M server
         LeshanServer lwServer = builder.build();
+        /* ---------------------------------------------------------- */
 
+        // Configuring Thread Pool
+        QueuedThreadPool threadPool = new QueuedThreadPool();
+        threadPool.setMinThreads(50);
+        threadPool.setMaxThreads(500);
+        threadPool.setDetailedDump(false);
+        threadPool.setIdleTimeout(60000);// 1 minute max idle
+
+        Server server = new Server(threadPool);
+        server.addBean(new ScheduledExecutorScheduler());
+
+        // Configuring Http Server
+        HttpConfiguration http_config = new HttpConfiguration();
+        http_config.setSendServerVersion(false);
+        http_config.setSendDateHeader(false);
+
+        // Adding ServerConnector
+        ServerConnector http = new ServerConnector(server, new HttpConnectionFactory(http_config));
+        http.setPort(webPort);
+        server.addConnector(http);
+
+        // Adding LowResourceMonitor
+        LowResourceMonitor lowResourceMonitor = new LowResourceMonitor(server);
+        lowResourceMonitor.setPeriod(1000); // every 1 second monitors
+        lowResourceMonitor.setLowResourcesIdleTimeout(200); // timeout for when in low res state
+        lowResourceMonitor.setMonitorThreads(true);
+        lowResourceMonitor.setMaxConnections(0); // max n' connections before triggering
+        lowResourceMonitor.setMaxMemory(0); // max memory before triggering
+        lowResourceMonitor.setMaxLowResourcesTime(5000); // max time before idle timeout is reapplied to all connections
+
+        /* ---------------------------------------------------------- */
         // Now prepare Jetty
-        Server server = new Server(webPort);
+        // Server server = new Server(webPort);
         WebAppContext root = new WebAppContext();
         root.setContextPath("/");
         root.setResourceBase(LeshanServerDemo.class.getClassLoader().getResource("webapp").toExternalForm());
